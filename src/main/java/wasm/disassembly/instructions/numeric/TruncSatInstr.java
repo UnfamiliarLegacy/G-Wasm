@@ -17,7 +17,7 @@ public class TruncSatInstr extends Instr {
     public TruncSatInstr(BufferedInputStream in, InstrType instrType, Module module) throws IOException, InvalidOpCodeException {
         super(instrType);
         type = WUnsignedInt.read(in, 32);
-        if (type < 0 || type > 7) {
+        if (type < 0 || type > 17) {
             throw new InvalidOpCodeException("Invalid opcode");
         }
     }

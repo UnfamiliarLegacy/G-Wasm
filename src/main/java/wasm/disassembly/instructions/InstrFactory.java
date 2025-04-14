@@ -5,7 +5,10 @@ import wasm.disassembly.instructions.control.*;
 import wasm.disassembly.instructions.memory.Mem0Instr;
 import wasm.disassembly.instructions.memory.MemInstr;
 import wasm.disassembly.instructions.misc.SingleByteInstr;
+import wasm.disassembly.instructions.misc.ZeroByteInstr;
 import wasm.disassembly.instructions.numeric.*;
+import wasm.disassembly.instructions.specific.TableGetInstr;
+import wasm.disassembly.instructions.specific.TableSetInstr;
 import wasm.disassembly.instructions.variable.GlobalVariableInstr;
 import wasm.disassembly.instructions.variable.LocalVariableInstr;
 import wasm.disassembly.modules.Module;
@@ -18,9 +21,10 @@ import java.util.Map;
 public class InstrFactory {
 
     public static InstrType disassembleType(BufferedInputStream in) throws IOException, InvalidOpCodeException {
-        InstrType type = InstrType.from_val(in.read());
+        final int val = in.read();
+        final InstrType type = InstrType.from_val(val);
         if (type == null) {
-            throw new InvalidOpCodeException("Invalid instruction prefix");
+            throw new InvalidOpCodeException(String.format("Invalid instruction prefix 0x%x", val));
         }
 
         return type;
@@ -31,8 +35,8 @@ public class InstrFactory {
         map = new HashMap<>();
 
         // control instructions
-        map.put(InstrType.UNREACHABLE, SingleByteInstr::new);
-        map.put(InstrType.NOP, SingleByteInstr::new);
+        map.put(InstrType.UNREACHABLE, ZeroByteInstr::new);
+        map.put(InstrType.NOP, ZeroByteInstr::new);
 
         map.put(InstrType.BLOCK, BlockInstr::new);
         map.put(InstrType.LOOP, BlockInstr::new);
@@ -42,25 +46,26 @@ public class InstrFactory {
         map.put(InstrType.BR_IF, BranchInstr::new);
         map.put(InstrType.BR_TABLE, BranchTableInstr::new);
 
-        map.put(InstrType.RETURN, SingleByteInstr::new);
+        map.put(InstrType.RETURN, ZeroByteInstr::new);
         map.put(InstrType.CALL, CallInstr::new);
         map.put(InstrType.CALL_INDIRECT, CallIndirectInstr::new);
 
+        map.put(InstrType.REF_NULL, SingleByteInstr::new);
+
+        map.put(InstrType.TABLE_GET, TableGetInstr::new);
+        map.put(InstrType.TABLE_SET, TableSetInstr::new);
 
         // parametric instructions
-        map.put(InstrType.DROP, SingleByteInstr::new);
-        map.put(InstrType.SELECT, SingleByteInstr::new);
-
+        map.put(InstrType.DROP, ZeroByteInstr::new);
+        map.put(InstrType.SELECT, ZeroByteInstr::new);
 
         // variable instructions
         for (int i = 0x20; i <= 0x22; i++) map.put(InstrType.from_val(i), LocalVariableInstr::new);
         for (int i = 0x23; i <= 0x24; i++) map.put(InstrType.from_val(i), GlobalVariableInstr::new);
 
-
         // memory instructions
         for (int i = 0x28; i <= 0x3E; i++) map.put(InstrType.from_val(i), MemInstr::new);
         for (int i = 0x3F; i <= 0x40; i++) map.put(InstrType.from_val(i), Mem0Instr::new);
-
 
         // numeric instructions
         map.put(InstrType.I32_CONST, NumericI32ConstInstr::new);
@@ -80,7 +85,13 @@ public class InstrFactory {
             throw new InvalidOpCodeException("Invalid instruction prefix");
         }
 
-        return map.get(instrType).get(in, instrType, module);
+        final InstrSupplier supplier = map.get(instrType);
+
+        if (supplier == null) {
+            throw new InvalidOpCodeException(String.format("Missing instruction supplier for %s", instrType));
+        }
+
+        return supplier.get(in, instrType, module);
     }
 
 }

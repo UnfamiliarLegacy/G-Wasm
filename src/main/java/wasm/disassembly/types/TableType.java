@@ -14,9 +14,10 @@ public class TableType extends WASMOpCode {
     private Limits limits;
 
     public TableType(BufferedInputStream in, Module module) throws IOException, InvalidOpCodeException {
-        elemType = ElemType.from_val(in.read());
+        final int val = in.read();
+        elemType = ElemType.from_val(val);
         if (elemType == null) {
-            throw new InvalidOpCodeException("No such element type");
+            throw new InvalidOpCodeException(String.format("No such element type %x", val));
         }
         limits = new Limits(in, module);
     }

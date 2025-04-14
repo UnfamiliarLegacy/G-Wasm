@@ -4,8 +4,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 public enum ElemType {
-    FUNCREF(0x70);
-
+    REF_FUNC(0x70),
+    REF_EXTERN(0x6F);
 
     public int val;
     ElemType(int val) {

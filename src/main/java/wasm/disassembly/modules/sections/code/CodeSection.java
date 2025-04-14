@@ -1,6 +1,7 @@
 package wasm.disassembly.modules.sections.code;
 
 import wasm.disassembly.InvalidOpCodeException;
+import wasm.disassembly.conventions.Vector;
 import wasm.disassembly.instructions.Expression;
 import wasm.disassembly.instructions.Instr;
 import wasm.disassembly.instructions.InstrType;
@@ -29,7 +30,7 @@ public class CodeSection extends Section {
     public final byte[] asBytes;
     public long length;
     public int copiesLength;
-//    private Vector<Code> codesEntries;
+    private List<Code> codesEntries;
 
     public CodeSection(BufferedInputStream in, Module module) throws IOException, InvalidOpCodeException {
         super(in, module, CODE_SECTION_ID);
@@ -37,7 +38,7 @@ public class CodeSection extends Section {
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         Code[] copies = new Code[module.streamReplacements.size()];
 
-//        codesEntries = new Vector<>(in, Code::new, module);
+        codesEntries = new ArrayList<>();
         length = WUnsignedInt.read(in, 32);
         for (int i = 0; i < length; i++) {
             Code code = new Code(in, module);
@@ -79,6 +80,7 @@ public class CodeSection extends Section {
 
 
             code.assemble(buffer);
+            codesEntries.add(code);
         }
 
         for (Code code : copies) {
@@ -105,18 +107,18 @@ public class CodeSection extends Section {
         out.write(asBytes);
     }
 
-//    public Code getCodeByIdx(FuncIdx funcIdx) {
-//        return codesEntries.getElements().get((int)(funcIdx.getX()) - module.getImportSection().getTotalFuncImports());
-//    }
-//
-//    public Func getByIdx(FuncIdx funcIdx) {
-//        return getCodeByIdx(funcIdx).getCode();
-//    }
-//
-//    public List<Code> getCodesEntries() {
-//        return codesEntries.getElements();
-//    }
-//
+    public Code getCodeByIdx(FuncIdx funcIdx) {
+        return codesEntries.get((int)(funcIdx.getX()) - module.getImportSection().getTotalFuncImports());
+    }
+
+    public Func getByIdx(FuncIdx funcIdx) {
+        return getCodeByIdx(funcIdx).getCode();
+    }
+
+    public List<Code> getCodesEntries() {
+        return codesEntries;
+    }
+
 //    public void setCodesEntries(List<Code> codesEntries) {
 //        this.codesEntries = new Vector<>(codesEntries);
 //    }

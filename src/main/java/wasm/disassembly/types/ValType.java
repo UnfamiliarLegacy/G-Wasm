@@ -7,7 +7,9 @@ public enum ValType {
     I32(0x7f),
     I64(0x7e),
     F32(0x7d),
-    F64(0x7c);
+    F64(0x7c),
+    REF_FUNC(0x70),
+    REF_EXTERN(0x6F);
 
 
     public int val;
@@ -23,7 +25,11 @@ public enum ValType {
     }
 
     public static ValType from_val(int val) {
-        return map.get(val);
+        final ValType valType = map.get(val);
+        if (valType == null) {
+            throw new IllegalArgumentException(String.format("Invalid ValType 0x%x", val));
+        }
+        return valType;
     }
 
 }

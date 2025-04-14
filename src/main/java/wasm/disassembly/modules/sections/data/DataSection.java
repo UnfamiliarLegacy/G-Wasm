@@ -1,16 +1,16 @@
 package wasm.disassembly.modules.sections.data;
 
 import wasm.disassembly.InvalidOpCodeException;
-import wasm.disassembly.conventions.Vector;
+import wasm.disassembly.instructions.numeric.NumericI32ConstInstr;
 import wasm.disassembly.modules.Module;
 import wasm.disassembly.modules.sections.Section;
-import wasm.disassembly.modules.sections.element.Elem;
 import wasm.disassembly.values.WUnsignedInt;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.List;
 
 public class DataSection extends Section {
@@ -18,17 +18,18 @@ public class DataSection extends Section {
     public static final int DATA_SECTION_ID = 11;
     private final byte[] asBytes;
     private long length;
-
-//    private Vector<Data> dataSegments;
+    private List<Data> dataSegments;
 
     public DataSection(BufferedInputStream in, Module module) throws IOException, InvalidOpCodeException {
         super(in, module, DATA_SECTION_ID);
-//        dataSegments = new Vector<>(in, Data::new, module);
+        dataSegments = new ArrayList<>();
 
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         length = WUnsignedInt.read(in, 32);
         for (int i = 0; i < length; i++) {
-            new Data(in, module).assemble(buffer);
+            final Data data = new Data(in, module);
+            dataSegments.add(data);
+            data.assemble(buffer);
         }
         asBytes = buffer.toByteArray();
     }
@@ -46,11 +47,29 @@ public class DataSection extends Section {
         out.write(asBytes);
     }
 
-//
-//    public List<Data> getDataSegments() {
-//        return dataSegments.getElements();
-//    }
-//
+    public List<Data> getDataSegments() {
+        return dataSegments;
+    }
+
+    public byte[] getData(int address, int length) {
+        for (Data segment : dataSegments) {
+            int start = ((NumericI32ConstInstr) segment.getOffset().getInstructions().get(0)).getConstValue();
+            int end = start + segment.getData().length;
+
+            if (address >= start && address < end) {
+                final byte[] data = new byte[length];
+                System.arraycopy(segment.getData(), address - start, data, 0, length);
+                return data;
+            }
+        }
+
+        return null;
+    }
+
+    public byte[] getDataBetween(int address, int end) {
+        return getData(address, end - address);
+    }
+
 //    public void setDataSegments(List<Data> dataSegments) {
 //        this.dataSegments = new Vector<>(dataSegments);
 //    }

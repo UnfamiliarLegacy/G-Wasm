@@ -33,6 +33,8 @@ public enum InstrType {
     LOCAL_TEE(0x22),
     GLOBAL_GET(0x23),
     GLOBAL_SET(0x24),
+    TABLE_GET(0x25),
+    TABLE_SET(0x26),
 
 
     // memory instructions
@@ -208,6 +210,10 @@ public enum InstrType {
     I64_EXTEND8_S(0xC2),
     I64_EXTENDS16_6(0xC3),
     I64_EXTENDS32_S(0xC4),
+
+    REF_NULL(0xD0),
+    REF_IS_NULL(0xD1),
+    REF_FUNC(0xD2),
 
     IXX_TRUNC_SAT_FXX_SU(0xFC);
 
