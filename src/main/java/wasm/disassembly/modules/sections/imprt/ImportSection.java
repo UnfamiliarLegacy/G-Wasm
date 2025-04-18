@@ -1,6 +1,5 @@
 package wasm.disassembly.modules.sections.imprt;
 
-import com.sun.org.apache.xpath.internal.functions.FuncId;
 import wasm.disassembly.InvalidOpCodeException;
 import wasm.disassembly.conventions.Vector;
 import wasm.disassembly.modules.Module;

@@ -1,17 +1,13 @@
 package wasm.disassembly.modules.indices;
 
-import com.sun.org.apache.xpath.internal.functions.FuncId;
 import wasm.disassembly.InvalidOpCodeException;
 import wasm.disassembly.WASMOpCode;
 import wasm.disassembly.modules.Module;
-import wasm.disassembly.modules.sections.code.CodeSection;
 import wasm.disassembly.values.WUnsignedInt;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.List;
 
 public class FuncIdx extends WASMOpCode {
 
