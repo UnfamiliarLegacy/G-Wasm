@@ -1,11 +1,11 @@
 package wasm.disassembly.modules.sections.code;
 
 import wasm.disassembly.InvalidOpCodeException;
-import wasm.disassembly.conventions.Vector;
 import wasm.disassembly.instructions.Expression;
 import wasm.disassembly.instructions.Instr;
 import wasm.disassembly.instructions.InstrType;
 import wasm.disassembly.instructions.control.CallInstr;
+import wasm.disassembly.instructions.numeric.NumericI32ConstInstr;
 import wasm.disassembly.instructions.variable.LocalVariableInstr;
 import wasm.disassembly.modules.Module;
 import wasm.disassembly.modules.indices.FuncIdx;
@@ -41,49 +41,65 @@ public class CodeSection extends Section {
         codesEntries = new ArrayList<>();
         length = WUnsignedInt.read(in, 32);
         for (int i = 0; i < length; i++) {
-            Code code = new Code(in, module);
+            final int realFuncIdxOffset = module.getImportSection().getImports().size() - module.streamReplacements.size();
+            final int realFuncIdx = i + realFuncIdxOffset;
 
+            final Code code = new Code(in, module);
+            final Func func = code.getCode();
 
-            Func func = code.getCode();
-            for (int j = 0; j < module.streamReplacements.size(); j++) {
+            for (int replacementId = 0; replacementId < module.streamReplacements.size(); replacementId++) {
+                final StreamReplacement replacement = module.streamReplacements.get(replacementId);
+                final StreamReplacement.ReplacementType actionTaken = replacement.getReplacementType();
 
-                if (module.getFunctionSection().matchesSearchFunctionsTypes.get(j).contains(i)) {
+                if (replacement.hasFunction(i) && replacement.codeMatches(realFuncIdx, func)) {
+                    if (actionTaken == StreamReplacement.ReplacementType.HOOK) {
+                        CallInstr call = new CallInstr(new FuncIdx(replacementId, module));
 
-                    if (module.streamReplacements.get(j).codeMatches(func)) {
-                        StreamReplacement.ReplacementType actionTaken = module.streamReplacements.get(j).getReplacementType();
-                        if (actionTaken == StreamReplacement.ReplacementType.HOOK) {
-                            CallInstr call = new CallInstr(new FuncIdx(j, module));
-
-                            List<Instr> newInstrs = new ArrayList<>();
-                            for (int k = 0; k < module.streamReplacements.get(j).getFuncType().getParameterType().typeList().size(); k++) {
-                                newInstrs.add(new LocalVariableInstr(InstrType.LOCAL_GET, new LocalIdx(k)));
-                            }
-                            newInstrs.add(call);
-                            newInstrs.addAll(func.getExpression().getInstructions());
-                            func.getExpression().setInstructions(newInstrs);
+                        List<Instr> newInstrs = new ArrayList<>();
+                        for (int k = 0; k < replacement.getFuncType().getParameterType().typeList().size(); k++) {
+                            newInstrs.add(new LocalVariableInstr(InstrType.LOCAL_GET, new LocalIdx(k)));
                         }
-                        else if (actionTaken == StreamReplacement.ReplacementType.HOOKCOPYEXPORT) {
-                            copies[j] = new Code(new Func(func.getLocalss(), new Expression(func.getExpression().getInstructions())));
+                        newInstrs.add(call);
+                        newInstrs.addAll(func.getExpression().getInstructions());
+                        func.getExpression().setInstructions(newInstrs);
 
-                            CallInstr call = new CallInstr(new FuncIdx(j, module));
-                            List<Instr> newInstrs = new ArrayList<>();
-                            for (int k = 0; k < module.streamReplacements.get(j).getFuncType().getParameterType().typeList().size(); k++) {
-                                newInstrs.add(new LocalVariableInstr(InstrType.LOCAL_GET, new LocalIdx(k)));
-                            }
-                            newInstrs.add(call);
-                            func.getExpression().setInstructions(newInstrs);
+                        replacement.setPatched(true);
+                    } else if (actionTaken == StreamReplacement.ReplacementType.HOOK_COPYEXPORT) {
+                        copies[replacementId] = new Code(new Func(func.getLocalss(), new Expression(func.getExpression().getInstructions())));
+
+                        CallInstr call = new CallInstr(new FuncIdx(replacementId, module));
+                        List<Instr> newInstrs = new ArrayList<>();
+                        for (int k = 0; k < replacement.getFuncType().getParameterType().typeList().size(); k++) {
+                            newInstrs.add(new LocalVariableInstr(InstrType.LOCAL_GET, new LocalIdx(k)));
                         }
+                        newInstrs.add(call);
+                        func.getExpression().setInstructions(newInstrs);
+
+                        replacement.setPatched(true);
+                    } else if (actionTaken == StreamReplacement.ReplacementType.HOOK_DEBUG) {
+                        final List<Instr> newInstrs = new ArrayList<>();
+
+                        newInstrs.add(new NumericI32ConstInstr(i)); // + module.getImportSection().getImports().size()
+
+                        for (int k = 0; k < replacement.getFuncType().getParameterType().typeList().size(); k++) {
+                            newInstrs.add(new LocalVariableInstr(InstrType.LOCAL_GET, new LocalIdx(k)));
+                        }
+
+                        newInstrs.add(new CallInstr(new FuncIdx(replacementId, module)));
+                        newInstrs.addAll(func.getExpression().getInstructions());
+
+                        func.getExpression().setInstructions(newInstrs);
+
+                        replacement.setPatched(true);
                     }
-
                 }
             }
-
 
             code.assemble(buffer);
             codesEntries.add(code);
         }
 
-        for (Code code : copies) {
+        for (final Code code : copies) {
             if (code != null) {
                 code.assemble(buffer);
                 length++;

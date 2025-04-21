@@ -7,6 +7,7 @@ import wasm.disassembly.modules.indices.FuncIdx;
 import wasm.disassembly.modules.sections.Section;
 import wasm.disassembly.types.FuncType;
 import wasm.disassembly.types.ResultType;
+import wasm.disassembly.types.ValType;
 import wasm.misc.StreamReplacement;
 
 import java.io.BufferedInputStream;
@@ -47,14 +48,25 @@ public class ImportSection extends Section {
 
         List<Import> newImports = new ArrayList<>();
 
+        for (final StreamReplacement streamReplacement : module.streamReplacements) {
+            ResultType parameterType = streamReplacement.getFuncType().getParameterType();
+            ResultType resultType = streamReplacement.getReplacementType() == StreamReplacement.ReplacementType.HOOK
+                    ? new ResultType(Collections.emptyList())
+                    : streamReplacement.getFuncType().getResultType();
 
+            if (streamReplacement.getReplacementType() == StreamReplacement.ReplacementType.HOOK_DEBUG) {
+                final List<ValType> paramTypes = new ArrayList<>();
 
-        for (StreamReplacement streamReplacement : module.streamReplacements) {
+                paramTypes.add(ValType.I32);
+                paramTypes.addAll(parameterType.typeList());
+
+                parameterType = new ResultType(paramTypes);
+            }
+
             newImports.add(new Import("env", streamReplacement.getImportName(), new ImportDesc(
-                    module.getTypeSection().getTypeIdxForFuncType(new FuncType(
-                            streamReplacement.getFuncType().getParameterType(),
-                            streamReplacement.getReplacementType() == StreamReplacement.ReplacementType.HOOK ? new ResultType(Collections.emptyList()) :
-                                    streamReplacement.getFuncType().getResultType()
+                    module.getTypeSection().findOrAddTypeIdxForFuncType(new FuncType(
+                            parameterType,
+                            resultType
                     ))
             )));
         }

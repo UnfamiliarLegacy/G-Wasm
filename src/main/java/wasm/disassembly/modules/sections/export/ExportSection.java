@@ -41,12 +41,11 @@ public class ExportSection extends Section {
         this.exports = new Vector<>(exports);
     }
 
-
     public void addShittyExports(Module module) {
         int count = 0;
         for (int i = 0; i < module.streamReplacements.size(); i++) {
             StreamReplacement.ReplacementType actionTaken = module.streamReplacements.get(i).getReplacementType();
-            if (actionTaken == StreamReplacement.ReplacementType.HOOKCOPYEXPORT) {
+            if (actionTaken == StreamReplacement.ReplacementType.HOOK_COPYEXPORT) {
                 getExports().add(new Export(module.streamReplacements.get(i).getExportName(), new ExportDesc(new FuncIdx(
                         module.getCodeSection().length + module.getImportSection().getTotalFuncImports() -
                                 module.getCodeSection().copiesLength + count, module

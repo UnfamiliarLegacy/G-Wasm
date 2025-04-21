@@ -13,15 +13,10 @@ public class FuncIdx extends WASMOpCode {
 
     private long x;
 
-
-//    public int ref; // debugging purpose
-
     public FuncIdx(BufferedInputStream in, Module module) throws IOException, InvalidOpCodeException {
-        x = WUnsignedInt.read(in, 32)
-                + module.streamReplacements.size();
-
-
-//        ref = CodeSection.currentI; // debugging purpose
+        // Shift all function indices by the number of imports
+        // This is to make place for the new imports at the start of the webassembly module
+        x = WUnsignedInt.read(in, 32) + module.streamReplacements.size();
     }
 
     public FuncIdx(long x, Module module) {

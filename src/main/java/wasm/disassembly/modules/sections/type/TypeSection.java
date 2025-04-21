@@ -3,10 +3,11 @@ package wasm.disassembly.modules.sections.type;
 import wasm.disassembly.InvalidOpCodeException;
 import wasm.disassembly.conventions.Vector;
 import wasm.disassembly.modules.Module;
-import wasm.disassembly.modules.indices.FuncIdx;
 import wasm.disassembly.modules.indices.TypeIdx;
 import wasm.disassembly.modules.sections.Section;
 import wasm.disassembly.types.FuncType;
+import wasm.misc.StreamReplacement;
+import wasm.misc.StreamReplacementException;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
@@ -23,11 +24,17 @@ public class TypeSection extends Section {
     public TypeSection(BufferedInputStream in, Module module) throws IOException, InvalidOpCodeException {
         super(in, module, TYPE_SECTION_ID);
         functionTypes = new Vector<>(in, FuncType::new, module);
-    }
 
-    public TypeSection(Module module, List<FuncType> functionTypes) {
-        super(module, TYPE_SECTION_ID);
-        this.functionTypes = new Vector<>(functionTypes);
+        // Populate the TypeIdx in all StreamReplacements.
+        for (final StreamReplacement replacement : module.streamReplacements) {
+            final TypeIdx typeIdx = findTypeIdxForFuncType(replacement.getFuncType());
+
+            if (typeIdx == null) {
+                throw new StreamReplacementException("TypeIdx not found for function type: " + replacement.getFuncType());
+            }
+
+            replacement.setTypeIdx(typeIdx);
+        }
     }
 
     @Override
@@ -51,12 +58,22 @@ public class TypeSection extends Section {
         this.functionTypes = new Vector<>(functionTypes);
     }
 
-    public TypeIdx getTypeIdxForFuncType(FuncType newFuncType) {
+    public TypeIdx findTypeIdxForFuncType(FuncType newFuncType) {
         for (int i = 0; i < getFunctionTypes().size(); i++) {
             FuncType funcType = getFunctionTypes().get(i);
             if (funcType.equals(newFuncType)) {
                 return new TypeIdx(i);
             }
+        }
+
+        return null;
+    }
+
+    public TypeIdx findOrAddTypeIdxForFuncType(FuncType newFuncType) {
+        final TypeIdx existingTypeIdx = findTypeIdxForFuncType(newFuncType);
+
+        if (existingTypeIdx != null) {
+            return existingTypeIdx;
         }
 
         getFunctionTypes().add(newFuncType);

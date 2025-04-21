@@ -3,7 +3,6 @@ package wasm.disassembly.types;
 import wasm.disassembly.InvalidOpCodeException;
 import wasm.disassembly.WASMOpCode;
 import wasm.disassembly.modules.Module;
-import wasm.disassembly.modules.sections.code.Func;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
